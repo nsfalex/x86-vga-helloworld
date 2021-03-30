@@ -1,4 +1,5 @@
 .section .data:
+test_text .ascii "Hello World!", 0x0
 terminal_color: .short  0x0 /* VGA terminal text color */
 terminal_buff:  .double 0x0 /* VGA terminal buffer */
 vga_width:  .short    80  /* VGA framebuffer character width  */
@@ -26,11 +27,14 @@ vga_colors:               /* VGA hardware text mode colors    */
   .global init_kernel
 
 /* Replacement for the enter instruction, faster than
-   the x86 base enter instruction */
-.macro enter
+   the x86 base enter instruction
+
+   allocbytes is the amount of bytes to allocate on the stack
+   by moving stack pointer down in increments of 4 */
+.macro enter allocbytes
   push %ebp
   mov  %ebp, %esp
-  sub  %esp, imm
+  sub  %esp, 4(\allocbytes)
 .endm
 
 /* Subsequent leave macro */
@@ -39,16 +43,23 @@ vga_colors:               /* VGA hardware text mode colors    */
   pop  %ebp
 .endm
 
-/* Kernel entrypoint after bootstrap */
+/* Kernel entrypoint after bootstrap, returning from here
+   doesn't make much sense */
 init_kernel:
-  ret
-
+  mov %eax, test_text
+  call strlen
 
 strlen:
-  enter
+  enter 0             /* Push ebp onto stack             */
+  push  %ebx          /* Push ebx onto stack to preserve */
+  mov   %ebx, 0       /* Clear ebx for counting          */
+  strlenloop:
+  cmp   (%eax+%ebx), 0x0   /* Check if next character is a null byte */
+  inc   %ebx               /* Increment ebx to check the next char   */
+  jne   strlenloop         /* Keep looping if that's not the case    */
   leave
 
 
 /*
-  vim: syntax=asm
-*/
+ *  vim: syntax=asm
+ */

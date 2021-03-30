@@ -1,3 +1,3 @@
 # kernel-assembly
 
-A simple microkernel implemented entirely in assembly.
+A simple 32-bit microkernel implemented entirely in assembly.
