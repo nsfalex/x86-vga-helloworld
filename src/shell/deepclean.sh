@@ -9,7 +9,7 @@ if [ -z "$1" ]; then
     exit 1
 fi
 
-keep="src grub CMakeLists.txt linker.ld .git LICENSE README.md"
+keep="src grub CMakeLists.txt linker.ld .git .gitignore LICENSE README.md"
 
 check_file() {
     for keepfile in $keep; do
