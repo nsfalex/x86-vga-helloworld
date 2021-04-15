@@ -12,6 +12,7 @@ CTestTestfile.cmake
 _deps
 
 # ---> Ninja
+build.ninja
 .ninja_deps
 .ninja_log
 
@@ -47,6 +48,7 @@ _deps
 *.dylib
 
 # Executables
+*.bin
 *.exe
 *.out
 *.app
