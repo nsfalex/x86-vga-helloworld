@@ -53,7 +53,32 @@ L99:
 /* Initialize the terminal environment and blank the screen */
 
 init_term:
+
   /* Set VGA terminal color */
+  movw (vga_colors), %bx    /* background = VGA color: black      */
+  movw 14(vga_colors), %cx  /* foreground = VGA color: light grey */
+  call vga_setcolor         /* Set global VGA color variable      */
+
+  /* Iterate through all possible columns on screen and clear them */
+  xor %eax, %ecx    /* Zero out eax */
+  mov $0x20, %bx    /* ASCII 30: Space (' ') */
+
+/* Increment rows */
+L1:
+  xor %edx, %edx    /* Zero out edx */
+
+/* Increment columns */
+L2:
+  call vga_putchar  /* Write the (empty) space to the screen */
+  inc  %edx         /* Increment column counter register     */
+  cmp  $80, %edx    /* Current column <= VGA screen width?   */
+  jle  L2
+
+  inc  %ecx         /* Increment row counter register    */
+  cmp  $25, %ecx    /* Current row <= VGA screen height? */
+  jle  L1
+
+  ret
 
 
 /*  vga_putchar: Write a character to the VGA text mode buffer
