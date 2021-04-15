@@ -55,9 +55,10 @@ L99:
 init_term:
 
   /* Set VGA terminal color */
-  movw (vga_colors), %bx    /* background = VGA color: black      */
-  movw 14(vga_colors), %cx  /* foreground = VGA color: light grey */
-  call vga_setcolor         /* Set global VGA color variable      */
+  movw (vga_colors), %bx      /* background = VGA color: black      */
+  mov  vga_colors, %eax
+  lea  0xE(%eax), %cx         /* foreground = VGA color: light grey */
+  call vga_setcolor           /* Set global VGA color variable      */
 
   /* Iterate through all possible columns on screen and clear them */
   xor %eax, %ecx    /* Zero out eax */
@@ -94,7 +95,7 @@ vga_putchar:
   xor  %eax, %eax   /* Zero out eax */
 
   /* Prepare the 16-bit character to write */
-  movw (term_color), %eax   /* Move the terminal color into eax         */
+  movw (term_color), %ax    /* Move the terminal color into eax         */
   shl  $8, %eax             /* Shift the color to the upper 8 bits      */
   movb %bl, %al             /* Move the character into the lower 8 bits */
   mov  %eax, %ebx           /* Put the character into ebx for later use */
@@ -107,7 +108,7 @@ vga_putchar:
   mov %eax, %ecx
 
   /* Put the character into the VGA text mode buffer */
-  movw %ebx, (%ecx)
+  movw %bx, (%ecx)
 
   /* Finishing up */
   pop %ebx
