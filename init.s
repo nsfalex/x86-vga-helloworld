@@ -81,12 +81,12 @@ init_term:
   pop  %ecx
 
   inc  %edx             /* Increment column counter register     */
-  cmp  $80, %edx        /* Current column <= VGA screen width?   */
-  jle  .L2
+  cmp  $79, %edx
+  jle  .L2              /* Current column <= VGA screen width?   */
 
   inc  %ecx             /* Increment row counter register    */
-  cmp  $25, %ecx        /* Current row <= VGA screen height? */
-  jle  .L1
+  cmp  $24, %ecx
+  jle  .L1              /* Current row <= VGA screen height? */
 
   /* Set the next write pos to the top left of the terminal */
   movw $0, (term_row)
@@ -100,19 +100,20 @@ init_term:
 
 vga_putstr:
   movb (%ecx), %bl
-  cmp  $0x0, %bl
+  test %bl, %bl
   jz   .IF3
   push %ecx
   call vga_putchar
   pop  %ecx
   inc  %ecx
   jmp  vga_putstr
+
 .IF3:
   ret
 
 
 /*  vga_putchar: Write a character to screen
- *      bl: Character to write
+ *      ebx: Character to write
  */
 
 vga_putchar:
@@ -121,10 +122,10 @@ vga_putchar:
   movw (term_row), %cx      /* Current row to print on    */
   movw (term_column), %dx   /* Current column to print on */
   call vga_writebuffer      /* Write character to buffer  */
-  movw (term_column), %ax   /* Column we just wrote to    */ 
+  movw (term_column), %ax   /* Column we just wrote to    */
   inc  %ax                  /* Increment column           */
-  cmp  $80, %ax             /* Current column+1 > VGA screen width? */
-  jl   .IF1
+  cmp  $79, %ax             /* 0 to 79 = 80 columns       */
+  jg   .IF1                 /* Current column+1 > VGA screen width? */
   movw %ax, (term_column)   /* Put the column+1 into memory */
   ret
 
@@ -132,8 +133,8 @@ vga_putchar:
   movw $0, (term_column)    /* Return the column to write on to zero */
   movw (term_row), %ax      /* Put the current terminal row into eax */
   inc  %ax                  /* Increment row to next row on screen   */
-  cmp  $25, %ax             /* Current row + 1 > VGA screen height?  */
-  jl   .IF2
+  cmp  $24, %ax             /* 0 to 24 rows = 25 rows                */
+  jg   .IF2                 /* Current row + 1 > VGA screen height?  */
   mov  $0, %eax             /* Yes? Restart from row 0 */
 
 .IF2:
@@ -142,9 +143,9 @@ vga_putchar:
 
 
 /*  vga_writebuffer: Write a character to the VGA text mode buffer
- *      bl: Character to write
- *      cl: Row to write to
- *      dl: Column to write to
+ *      ebx: Character to write
+ *      ecx: Row to write to
+ *      edx: Column to write to
  */
 
 vga_writebuffer:
@@ -155,15 +156,15 @@ vga_writebuffer:
 
   /* Prepare the 16-bit character to write */
   movb (term_color), %ah    /* Move the terminal color into eax' upper 8 bits */
-  movb %bl, %al             /* Move the character into the lower 8 bits */
-  mov  %eax, %ebx           /* Put the character into ebx for later use */
+  movb %bl, %al             /* Move the character into the lower 8 bits       */
+  mov  %eax, %ebx           /* Put the character into ebx for later use       */
 
   /* Calculate memory address to write to */
   mov $80, %eax       /* VGA text mode terminal width         */
   mul %cl             /* Multiply row number by buffer width  */
-  add %dl, %al        /* Add the remaining columns onto that  */
-  mov $2, %dl         /* VGA text mode entries are 2 bytes    */
-  mul %dl
+  add %edx, %eax      /* Add the remaining columns onto that  */
+  mov $2, %edx
+  mul %edx            /* VGA text mode entries are 2 bytes    */
   add $0xB8000, %eax  /* Add the VGA text buffer base pointer */
   mov %eax, %ecx
 
