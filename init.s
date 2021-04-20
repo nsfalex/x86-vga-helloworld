@@ -4,50 +4,54 @@
  *
  */
 
-.global init_kernel
+.section .rodata
+
+test_text: .asciz  "Hello World!"
+
+vga_colors:               /* VGA hardware text mode colors */
+  .long   0x00000000      /* Black          */
+  .long   0x00000001      /* Blue           */
+  .long   0x00000002      /* Green          */
+  .long   0x00000003      /* Cyan           */
+  .long   0x00000004      /* Red            */
+  .long   0x00000005      /* Magenta        */
+  .long   0x00000006      /* Brown          */
+  .long   0x00000007      /* Light Grey     */
+  .long   0x00000008      /* Dark Grey      */
+  .long   0x00000009      /* Light Blue     */
+  .long   0x0000000A      /* Light Green    */
+  .long   0x0000000B      /* Light Cyan     */
+  .long   0x0000000C      /* Light Red      */
+  .long   0x0000000D      /* Light Magenta  */
+  .long   0x0000000E      /* Light Brown    */
+  .long   0x0000000F      /* White          */
 
 
-.section .data:
 
-test_text:    .asciz  "Hello World!\n"
+.section .data
 
-term_color:  .word  0x0  /* VGA terminal text color     */
+term_color:  .byte  0x0  /* VGA terminal text color     */
 term_column: .word  0    /* Terminal column to print on */
 term_row:    .word  0    /* Terminal row to print on    */
-
-vga_colors:              /* VGA hardware text mode colors */
-  .word   0x0000         /* Black          */
-  .word   0x0001         /* Blue           */
-  .word   0x0002         /* Green          */
-  .word   0x0003         /* Cyan           */
-  .word   0x0004         /* Red            */
-  .word   0x0005         /* Magenta        */
-  .word   0x0006         /* Brown          */
-  .word   0x0007         /* Light Grey     */
-  .word   0x0008         /* Dark Grey      */
-  .word   0x0009         /* Light Blue     */
-  .word   0x000A         /* Light Green    */
-  .word   0x000B         /* Light Cyan     */
-  .word   0x000C         /* Light Red      */
-  .word   0x000D         /* Light Magenta  */
-  .word   0x000E         /* Light Brown    */
-  .word   0x000F         /* White          */
 
 
 
 /****** Start executable code ******/
 
 
-.section .text:
+.section .text
+  .global hello
 
 
 /* Hello kernel world! */
 
 hello:
-  call init_term    /* Initialize terminal interfaces */
-L99:
+  call init_term        /* Initialize terminal interfaces */
+  lea  test_text, %ecx
+  call vga_putstr
+.L99:
   hlt
-  jmp  L99
+  jmp .L99
 
 
 /* Initialize the terminal environment and blank the screen */
@@ -55,55 +59,111 @@ L99:
 init_term:
 
   /* Set VGA terminal color */
-  movw (vga_colors), %bx      /* background = VGA color: black      */
-  mov  vga_colors, %eax
-  lea  0xE(%eax), %cx         /* foreground = VGA color: light grey */
+  mov  (vga_colors), %ebx     /* background = VGA color: black      */
+  lea  vga_colors, %eax
+  mov  0x1c(%eax), %ecx       /* foreground = VGA color: light grey */
   call vga_setcolor           /* Set global VGA color variable      */
 
   /* Iterate through all possible columns on screen and clear them */
-  xor %eax, %ecx    /* Zero out eax */
-  mov $0x20, %bx    /* ASCII 30: Space (' ') */
+  xor %ecx, %ecx    /* Zero out ecx */
+  mov $0x20, %ebx   /* ASCII 30: Space (' ') */
 
 /* Increment rows */
-L1:
+.L1:
   xor %edx, %edx    /* Zero out edx */
 
 /* Increment columns */
-L2:
-  call vga_putchar  /* Write the (empty) space to the screen */
-  inc  %edx         /* Increment column counter register     */
-  cmp  $80, %edx    /* Current column <= VGA screen width?   */
-  jle  L2
+.L2:
+  push %ecx
+  push %edx
+  call vga_writebuffer  /* Write the (empty) space to the screen */
+  pop  %edx
+  pop  %ecx
 
-  inc  %ecx         /* Increment row counter register    */
-  cmp  $25, %ecx    /* Current row <= VGA screen height? */
-  jle  L1
+  inc  %edx             /* Increment column counter register     */
+  cmp  $80, %edx        /* Current column <= VGA screen width?   */
+  jle  .L2
 
+  inc  %ecx             /* Increment row counter register    */
+  cmp  $25, %ecx        /* Current row <= VGA screen height? */
+  jle  .L1
+
+  /* Set the next write pos to the top left of the terminal */
+  movw $0, (term_row)
+  movw $0, (term_column)
   ret
 
 
-/*  vga_putchar: Write a character to the VGA text mode buffer
- *      bx: Character to write
- *     ecx: Row to write to
- *     edx: Column to write to
+/*  vga_putstr: Writes a NULL terminated string to the VGA buffer
+ *      ecx: Pointer to the string
+ */
+
+vga_putstr:
+  movb (%ecx), %bl
+  cmp  $0x0, %bl
+  jz   .IF3
+  push %ecx
+  call vga_putchar
+  pop  %ecx
+  inc  %ecx
+  jmp  vga_putstr
+.IF3:
+  ret
+
+
+/*  vga_putchar: Write a character to screen
+ *      bl: Character to write
  */
 
 vga_putchar:
+  xor  %ecx, %ecx           /* Zero out ecx               */
+  xor  %edx, %edx           /* Zero out edx               */
+  movw (term_row), %cx      /* Current row to print on    */
+  movw (term_column), %dx   /* Current column to print on */
+  call vga_writebuffer      /* Write character to buffer  */
+  movw (term_column), %ax   /* Column we just wrote to    */ 
+  inc  %ax                  /* Increment column           */
+  cmp  $80, %ax             /* Current column+1 > VGA screen width? */
+  jl   .IF1
+  movw %ax, (term_column)   /* Put the column+1 into memory */
+  ret
+
+.IF1:
+  movw $0, (term_column)    /* Return the column to write on to zero */
+  movw (term_row), %ax      /* Put the current terminal row into eax */
+  inc  %ax                  /* Increment row to next row on screen   */
+  cmp  $25, %ax             /* Current row + 1 > VGA screen height?  */
+  jl   .IF2
+  mov  $0, %eax             /* Yes? Restart from row 0 */
+
+.IF2:
+  mov  %ax, (term_row)      /* Move the new row into memory          */
+  ret
+
+
+/*  vga_writebuffer: Write a character to the VGA text mode buffer
+ *      bl: Character to write
+ *      cl: Row to write to
+ *      dl: Column to write to
+ */
+
+vga_writebuffer:
 
   /* Starting off */
   push %ebx
   xor  %eax, %eax   /* Zero out eax */
 
   /* Prepare the 16-bit character to write */
-  movw (term_color), %ax    /* Move the terminal color into eax         */
-  shl  $8, %eax             /* Shift the color to the upper 8 bits      */
+  movb (term_color), %ah    /* Move the terminal color into eax' upper 8 bits */
   movb %bl, %al             /* Move the character into the lower 8 bits */
   mov  %eax, %ebx           /* Put the character into ebx for later use */
 
   /* Calculate memory address to write to */
   mov $80, %eax       /* VGA text mode terminal width         */
-  mul %ecx            /* Multiply row number by buffer width  */
-  add %edx, %eax      /* Add the remaining columns onto that  */
+  mul %cl             /* Multiply row number by buffer width  */
+  add %dl, %al        /* Add the remaining columns onto that  */
+  mov $2, %dl         /* VGA text mode entries are 2 bytes    */
+  mul %dl
   add $0xB8000, %eax  /* Add the VGA text buffer base pointer */
   mov %eax, %ecx
 
@@ -121,6 +181,7 @@ vga_putchar:
  */
 
 vga_setcolor:
+  xor  %eax, %eax
   movb %bl, %al           /* Move the background color into eax */
   shl  $4, %eax           /* Shift the color into the most significant 4 bits */
   xor  %cl, %al           /* Put the fg color in the least significant 4 bits */
