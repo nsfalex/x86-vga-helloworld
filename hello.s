@@ -16,7 +16,7 @@
 
 /* Set up the stack, 
  * note that per the System V ABI it has to be alligned to 
- * a 16 bit boundrary.
+ * a 16 bit boundary.
  */
 
 .section .bss
