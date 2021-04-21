@@ -1,8 +1,33 @@
-/*  init.s:
- *    A simple x86 VGA text mode hello world.
- *
- *
+/* Declare constants for the multiboot header. */
+.set ALIGN,    1<<0             /* align loaded modules on page boundaries */
+.set MEMINFO,  1<<1             /* provide memory map */
+.set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
+.set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
+.set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
+
+
+/* Declare the multiboot header */
+.section .multiboot
+.align 4
+.long MAGIC
+.long FLAGS
+.long CHECKSUM
+
+
+/* Set up the stack, 
+ * note that per the System V ABI it has to be alligned to 
+ * a 16 bit boundrary.
  */
+
+.section .bss
+
+.align 16
+stack_bottom:
+.skip 16384 	/* 16 KiB */
+stack_top:
+ 
+
+/* Read only data */
 
 .section .rodata
 
@@ -40,7 +65,23 @@ term_row:    .word  0    /* Terminal row to print on    */
 
 
 .section .text
-  .global hello
+.global _start
+.type _start, @function
+
+
+/* Entry point */
+
+_start:
+	mov $stack_top, %esp	/* Initialize the stack */
+  call hello
+ 
+	cli			              /* Ignore hardware interrupts */
+
+/* Returning to the bootloader doesn't make much sense */
+.L99:
+  hlt
+  jmp .L99
+.size _start, . - _start
 
 
 /* Hello kernel world! */
@@ -63,10 +104,8 @@ hello:
   lea  test_text, %ecx
   call vga_putstr           /* Write test_text to screen   */
 
-/* Returning to the bootloader doesn't make much sense */
-.L99:
-  hlt
-  jmp .L99
+  ret
+
 
 
 /* Initialize the terminal environment and blank the screen */
@@ -226,4 +265,4 @@ strlen:
   ret
 
 
-// vim: syntax=asm
+// vim:syntax=asm
