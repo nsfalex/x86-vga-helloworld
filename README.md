@@ -19,4 +19,4 @@ or
 qemu-system-i386 -kernel hello.bin
 ```
 
-![QEMU VGA display](http://10.10.10.1:3000/alex/kernel-assembly/raw/branch/master/img/qemu-system.png)
+![QEMU VGA display]()

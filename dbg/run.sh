@@ -3,20 +3,10 @@
 LOG="/dev/stdout"
 
 qemu_start_dbg() {
-  if [ -z "$3" ]; then
-    for s in `tmux list-sessions -F '#{session_name}'`; do
-      tmux list-panes -F '#{pane_tty} #{session_name} #{window}' -t "$s"
-    done | grep "$(tty)" | awk '{print $2}' | read -r session
-
-    echo "$session"
-  fi
-
-# qemu-system-x86_64 \
   qemu-system-i386 \
     -kernel "$1" \
     -machine pc-i440fx-5.2 \
     -cpu qemu32-v1 \
-    -enable-kvm \
     -m 500M \
     -S -s \
     -smp 2 \
@@ -25,12 +15,10 @@ qemu_start_dbg() {
 }
 
 qemu_start() {
-# qemu-system-x86_64 \
   qemu-system-i386 \
     -kernel "$1" \
     -machine pc-i440fx-5.2 \
     -cpu qemu32-v1 \
-    -enable-kvm \
     -m 500M \
     -smp 2 \
     -pidfile /tmp/${1}.pid \
@@ -58,19 +46,17 @@ print_help() {
   echo "  -l,    --log <file>    Log to file"
   echo "  -d,  --debug           Create GDB remote session"
   echo "  -s,    --sym <file>    Symbol file for GDB"
-  echo "      --notmux           Don't interact with / spawn tmux session"
   echo ""
 }
 
 main() {
   if [ -z "$1" ]; then
-    echo -e "ERROR: Requirements are not met"
+    echo -e "ERROR: Requirements not met"
     print_help
     exit 1
   fi
 
   target="run"
-  use_tmux=""
   kernel=""
   symbol=""
 
@@ -101,11 +87,6 @@ main() {
         shift
         ;;
 
-      --notmux)
-        use_tmux="no tmux"
-        shift
-        ;;
-      
       *)
         if [ -f "$1" ] && [ -z "$kernel" ]; then
           echo "Using kernel file: $1" >> $LOG
@@ -126,17 +107,3 @@ main() {
 }
 
 main $@
-
-#qemu-system-x86_64 \
-#  -kernel  \
-#  -append "console=ttyS0 root=/dev/sda earlyprintk=serial nokaslr"\
-#  -hda ./stretch.img \
-#  -net user,hostfwd=tcp::10021-:22 -net nic \
-#  -enable-kvm \
-#  -nographic \
-#  -m 2G \
-#  -s \
-#  -S \
-#  -smp 2 \
-#  -pidfile vm.pid \
-#  2>&1 | tee vm.log
