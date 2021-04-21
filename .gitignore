@@ -61,6 +61,7 @@ build.ninja
 *.su
 *.idb
 *.pdb
+*.sym
 
 # Kernel Module Compile Results
 *.mod*
@@ -70,5 +71,3 @@ modules.order
 Module.symvers
 Mkfile.old
 dkms.conf
-
-*.sym
