@@ -47,8 +47,22 @@ term_row:    .word  0    /* Terminal row to print on    */
 
 hello:
   call init_term        /* Initialize terminal interfaces */
+
+  /* Center text on screen */
+  lea  test_text, %ebx
+  call strlen
+  mov  $2, %bl
+  div  %bl
+  mov  $39, %bx
+  sub  %ax, %bx
+  movw %bx, (term_column)
+
+  movw $9, (term_row)
+
+  /* Write text to screen */
   lea  test_text, %ecx
   call vga_putstr
+
 .L99:
   hlt
   jmp .L99
@@ -187,6 +201,27 @@ vga_setcolor:
   shl  $4, %eax           /* Shift the color into the most significant 4 bits */
   xor  %cl, %al           /* Put the fg color in the least significant 4 bits */
   movb %al, (term_color)  /* Write the finished color variable to memory      */
+  ret
+
+
+/*  strlen: Returns the length of a C-type string
+ *      ebx:  Pointer to c-string
+ *      eax:  Returned length
+ */
+
+strlen:
+  push %ebx
+
+.L3:
+  movb (%ebx), %al
+  inc  %ebx
+  test %al, %al
+  jnz  .L3
+
+  mov %ebx, %eax
+  pop %ebx
+  sub %ebx, %eax
+  dec %eax
   ret
 
 
