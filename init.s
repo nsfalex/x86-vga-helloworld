@@ -50,19 +50,20 @@ hello:
 
   /* Center text on screen */
   lea  test_text, %ebx
-  call strlen
+  call strlen               /* Get the length of test_text */
   mov  $2, %bl
-  div  %bl
-  mov  $39, %bx
-  sub  %ax, %bx
-  movw %bx, (term_column)
+  div  %bl                  /* Half the length             */
+  mov  $39, %bx             /* Half of VGA screen width    */
+  sub  %ax, %bx             /* screen width - strlen       */
+  movw %bx, (term_column)   /* Put the new pos in memory   */
 
-  movw $9, (term_row)
+  movw $9, (term_row)       /* ~Half of VGA term height    */
 
   /* Write text to screen */
   lea  test_text, %ecx
-  call vga_putstr
+  call vga_putstr           /* Write test_text to screen   */
 
+/* Returning to the bootloader doesn't make much sense */
 .L99:
   hlt
   jmp .L99
@@ -79,12 +80,12 @@ init_term:
   call vga_setcolor           /* Set global VGA color variable      */
 
   /* Iterate through all possible columns on screen and clear them */
-  xor %ecx, %ecx    /* Zero out ecx */
-  mov $0x20, %ebx   /* ASCII 30: Space (' ') */
+  xor %ecx, %ecx              /* Zero out ecx */
+  mov $0x20, %ebx             /* ASCII 30: Space (' ') */
 
 /* Increment rows */
 .L1:
-  xor %edx, %edx    /* Zero out edx */
+  xor %edx, %edx        /* Zero out edx */
 
 /* Increment columns */
 .L2:
@@ -113,14 +114,14 @@ init_term:
  */
 
 vga_putstr:
-  movb (%ecx), %bl
+  movb (%ecx), %bl  /* Move the character that ecx points to into bl */
   test %bl, %bl
-  jz   .IF3
-  push %ecx
-  call vga_putchar
-  pop  %ecx
-  inc  %ecx
-  jmp  vga_putstr
+  jz   .IF3         /* Make sure the character isn't a NULL byte     */
+  push %ecx         /* Preserve ecx across function call             */
+  call vga_putchar  /* Write the character in bl to the screen       */
+  pop  %ecx         /* Restore ecx to its state before the call      */
+  inc  %ecx         /* Move the pointer one byte forward             */
+  jmp  vga_putstr   /* Loop back to start                            */
 
 .IF3:
   ret
@@ -166,7 +167,7 @@ vga_writebuffer:
 
   /* Starting off */
   push %ebx
-  xor  %eax, %eax   /* Zero out eax */
+  xor  %eax, %eax           /* Zero out eax */
 
   /* Prepare the 16-bit character to write */
   movb (term_color), %ah    /* Move the terminal color into eax' upper 8 bits */
@@ -174,12 +175,12 @@ vga_writebuffer:
   mov  %eax, %ebx           /* Put the character into ebx for later use       */
 
   /* Calculate memory address to write to */
-  mov $80, %eax       /* VGA text mode terminal width         */
-  mul %cl             /* Multiply row number by buffer width  */
-  add %edx, %eax      /* Add the remaining columns onto that  */
+  mov $80, %eax             /* VGA text mode terminal width         */
+  mul %cl                   /* Multiply row number by buffer width  */
+  add %edx, %eax            /* Add the remaining columns onto that  */
   mov $2, %edx
-  mul %edx            /* VGA text mode entries are 2 bytes    */
-  add $0xB8000, %eax  /* Add the VGA text buffer base pointer */
+  mul %edx                  /* VGA text mode entries are 2 bytes    */
+  add $0xB8000, %eax        /* Add the VGA text buffer base pointer */
   mov %eax, %ecx
 
   /* Put the character into the VGA text mode buffer */
@@ -197,7 +198,7 @@ vga_writebuffer:
 
 vga_setcolor:
   xor  %eax, %eax
-  movb %bl, %al           /* Move the background color into eax */
+  movb %bl, %al           /* Move the background color into eax               */
   shl  $4, %eax           /* Shift the color into the most significant 4 bits */
   xor  %cl, %al           /* Put the fg color in the least significant 4 bits */
   movb %al, (term_color)  /* Write the finished color variable to memory      */
@@ -213,15 +214,15 @@ strlen:
   push %ebx
 
 .L3:
-  movb (%ebx), %al
-  inc  %ebx
+  movb (%ebx), %al  /* Put the character ebx is pointing at into al */
+  inc  %ebx         /* Move the pointer forward by one byte         */
   test %al, %al
-  jnz  .L3
+  jnz  .L3          /* Is the character in al not the null byte?    */
 
-  mov %ebx, %eax
-  pop %ebx
-  sub %ebx, %eax
-  dec %eax
+  mov %ebx, %eax    /* Put the ptr to the end of the str into eax   */
+  pop %ebx          /* Restore the "base pointer", to ebx           */
+  sub %ebx, %eax    /* Subtract the end of the str with the start   */
+  dec %eax          /* Account for the extra `inc %ebx`             */
   ret
 
 
