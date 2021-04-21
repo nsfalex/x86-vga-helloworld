@@ -1,7 +1,7 @@
 # x86-vga-helloworld
 
 x86 VGA text mode hello world, implemented entirely in assembly.
-Entry code and linker script originally from the [OSDev.org wiki](https://wiki.osdev.org/Bare_Bones).
+Bootstrap code and linker script originally from the [OSDev.org wiki](https://wiki.osdev.org/Bare_Bones).
 
 ### Build
 
