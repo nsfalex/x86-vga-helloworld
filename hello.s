@@ -74,13 +74,13 @@ term_row:    .word  0    /* Terminal row to print on    */
 _start:
 	mov $stack_top, %esp	/* Initialize the stack */
   call hello
- 
 	cli			              /* Ignore hardware interrupts */
 
 /* Returning to the bootloader doesn't make much sense */
 .L99:
   hlt
   jmp .L99
+
 .size _start, . - _start
 
 
