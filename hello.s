@@ -2,8 +2,8 @@
 .set ALIGN,    1<<0             /* align loaded modules on page boundaries */
 .set MEMINFO,  1<<1             /* provide memory map */
 .set FLAGS,    ALIGN | MEMINFO  /* this is the Multiboot 'flag' field */
-.set MAGIC,    0x1BADB002       /* 'magic number' lets bootloader find the header */
-.set CHECKSUM, -(MAGIC + FLAGS) /* checksum of above, to prove we are multiboot */
+.set MAGIC,    0x1BADB002       /* Multiboot magic bytes */
+.set CHECKSUM, -(MAGIC + FLAGS) /* checksum of the above */
 
 
 /* Declare the multiboot header */
@@ -74,7 +74,7 @@ term_row:    .word  0    /* Terminal row to print on    */
 _start:
 	mov $stack_top, %esp	/* Initialize the stack */
   call hello
-	cli			              /* Ignore hardware interrupts */
+  cli                   /* Ignore hardware interrupts */
 
 /* Returning to the bootloader doesn't make much sense */
 .L99:
@@ -265,4 +265,6 @@ strlen:
   ret
 
 
-// vim:syntax=asm
+/* vim:syntax=asm
+ * vim:ts=2 expandtab
+ */
