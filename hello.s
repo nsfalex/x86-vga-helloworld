@@ -72,9 +72,9 @@ term_row:    .word  0    /* Terminal row to print on    */
 /* Entry point */
 
 _start:
-	mov $stack_top, %esp	/* Initialize the stack */
+  mov $stack_top, %esp  /* Initialize the stack */
   call hello
-  cli                   /* Ignore hardware interrupts */
+  cli                   /* Ignore hardware interrupts (clear interrupt flag)*/
 
 /* Returning to the bootloader doesn't make much sense */
 .L99:
